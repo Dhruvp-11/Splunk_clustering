@@ -1,0 +1,14 @@
+- hosts: indexer
+  user: ec2-user
+  become: yes  
+
+  tasks:
+    
+    - name: start splunk
+      command: /opt/splunk/bin/./splunk start
+      
+    - name: enable the peer nodes of indexer cluster 
+      command: /opt/splunk/bin/./splunk edit cluster-config -mode peer -master_uri https://43.205.212.115:8089 -replication_port 8085 -secret admin123 -auth admin:admin123
+
+    - name: splunk restart 
+      command: /opt/splunk/bin/./splunk restart

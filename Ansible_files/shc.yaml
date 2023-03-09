@@ -1,0 +1,69 @@
+---
+- name: deployer config 
+  hosts: deployer
+  user: ec2-user
+  become: yes  
+
+  tasks:
+    - name: enable the clustering in deployer
+      copy: 
+          dest: /opt/splunk/etc/system/local/server.conf
+          content: |
+             [shclustering]
+             shcluster_label = shcluster1
+             pass4SymmKey = admin123
+
+    - name: restart splunk
+      command: /opt/splunk/bin/./splunk restart 
+
+- name: shc1 
+  hosts: shc1
+  user: ec2-user
+  become: yes
+
+  tasks:
+    - name: restart splunkd
+      command: /opt/splunk/bin/./splunk restart
+      
+    - name: configure search peer 
+      command: /opt/splunk/bin/./splunk init shcluster-config -auth admin:admin123 -mgmt_uri https://43.204.231.184:8089 -replication_port 8084 -replication_factor 2 -conf_deploy_fetch_url https://65.0.205.234:8089 -secret admin123 -shcluster_label shcluster1
+
+    - name: restart splunk
+      command: /opt/splunk/bin/./splunk restart
+
+- name: shc 2 
+  hosts: shc2
+  user: ec2-user
+  become: yes
+
+  tasks:
+    - name: restart splunk
+      command: /opt/splunk/bin/./splunk restart
+    
+    - name: configure search peer 
+      command: /opt/splunk/bin/./splunk init shcluster-config -auth admin:admin123 -mgmt_uri https://65.2.5.85:8089 -replication_port 8084 -replication_factor 2 -conf_deploy_fetch_url https://65.0.205.234:8089 -secret admin123 -shcluster_label shcluster1
+
+    - name: restart splunk
+      command: /opt/splunk/bin/./splunk restart
+    
+
+- name: shc 1 captain
+  hosts: shc1
+  user: ec2-user
+  become: yes
+
+  tasks:
+    - name: cluster captain
+      command: /opt/splunk/bin/./splunk bootstrap shcluster-captain -servers_list "https://43.204.231.184:8089,https://65.2.5.85:8089" -auth admin:admin123
+
+- name: shc cluster with indexer
+  hosts: shc
+  user: ec2-user
+  become: yes
+
+  tasks:
+    - name: configure indexer cluster with search head 
+      command : /opt/splunk/bin/./splunk edit cluster-config -mode searchhead -master_uri https://43.205.212.115:8089 -secret admin123 -auth admin:admin123
+
+    - name: restart splunk
+      command: /opt/splunk/bin/./splunk restart

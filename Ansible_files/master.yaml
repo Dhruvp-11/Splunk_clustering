@@ -1,0 +1,13 @@
+- hosts: webserver1
+  user: ec2-user
+  become: yes  
+
+  tasks:
+    - name: start splunk
+      command: /opt/splunk/bin/./splunk start
+      
+    - name: enable the indexer clustering in master node
+      command: /opt/splunk/bin/./splunk edit cluster-config -mode master -replication_factor 2 -search_factor 2 -secret admin123 -auth admin:admin123 
+      
+    - name: restart splunk
+      command: /opt/splunk/bin/./splunk restart
